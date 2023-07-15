@@ -261,27 +261,40 @@ def check_your_pass(message):
     cur.execute(f"SELECT * FROM users WHERE user_id={message.from_user.id}")
     user_data = cur.fetchone()
     if user_data:
-        cancel(message)
+        # Кнопки подтверждения
+        markup = types.InlineKeyboardMarkup()
+        yes_cancel_button = types.InlineKeyboardButton(text='Подтвердить', callback_data='yes_cancel')
+        markup.row(yes_cancel_button)
+        no_cancel_button = types.InlineKeyboardButton(text='Нет', callback_data='no_cancel')
+        markup.row(no_cancel_button)
+        bot.send_message(message.chat.id, f'Подтвердите, чтобы отменить рабочий день:\n\n ', reply_markup=markup)
     else:
         bot.send_message(message.chat.id, 'Вы не авторизованы, нажмите - /start')
 
-def cancel(message):
+
+
+@bot.callback_query_handler(func=lambda call: call.data == 'yes_cancel')
+def cancel(call: types.CallbackQuery):
     global admins
     conn = psycopg2.connect(host=host, database=database, user=user, password=password, port=port)
     cur = conn.cursor()
-    cur.execute(f"SELECT * FROM id{message.from_user.id} WHERE id=(SELECT MAX(id) FROM id{message.from_user.id})")
+    cur.execute(f"SELECT * FROM id{call.from_user.id} WHERE id=(SELECT MAX(id) FROM id{call.from_user.id})")
     user_data1 = cur.fetchone()
 
     if user_data1[1] is not None and user_data1[2] is None:
-        cur.execute(f"DELETE FROM id{message.from_user.id} WHERE id=(SELECT MAX(id) FROM id{message.from_user.id})")
+        cur.execute(f"DELETE FROM id{call.from_user.id} WHERE id=(SELECT MAX(id) FROM id{call.from_user.id})")
         conn.commit()
-        bot.send_message(message.chat.id, f"Таймер сброшен. Теперь можете заново начать работу /start_work")
+        bot.send_message(call.message.chat.id, f"Таймер сброшен. Теперь можете заново начать работу /start_work")
         for admin in admins:
-            cur.execute(f"SELECT * FROM users WHERE user_id={message.from_user.id}")
+            cur.execute(f"SELECT * FROM users WHERE user_id={call.from_user.id}")
             user_data = cur.fetchone()
-            bot.send_message(admin, f"{user_data[1]} нажал отмена.")
+            bot.send_message(admin, f"{user_data[1]} отменил свой рабочий день.")
     else:
-        bot.send_message(message.chat.id, f"Нечего отменять, вы еще не начали работать")
+        bot.send_message(call.message.chat.id, f"Нечего отменять, вы еще не начали работать")
+
+@bot.callback_query_handler(func=lambda call: call.data == 'no_cancel')
+def no_cancel(call: types.CallbackQuery):
+    bot.send_message(call.message.chat.id, f"Продолжайте работать")
 
 
 
@@ -344,6 +357,8 @@ def pause_end(message):
     if user_data[1] is not None and user_data[2] is None:
         p_end = datetime.combine(date.today(), datetime.now().time())
         p_start = datetime.combine(date.today(), user_data[3])
+        if p_end < p_start:
+            p_end += timedelta(days=1)
         pause_time = p_end - p_start
 
         bot.send_message(message.chat.id, f'Общее время перерыва:\n{str(pause_time)[:7]}\nПродолжение работы...\n\n'
@@ -592,3 +607,5 @@ while True:
     except Exception as e:
         print(e)
         time.sleep(15)
+
+
