@@ -3,6 +3,7 @@ import locale
 import re
 import time
 from datetime import datetime, date, timedelta
+import os
 
 import psycopg2
 import telebot
@@ -50,9 +51,10 @@ def start(message):
             markup.row(stat_employee)
             drop_user = types.InlineKeyboardButton(text='Удалить сотрудника', callback_data='drop_user')
             markup.row(drop_user)
-            bot.send_message(message.chat.id, f'Вы авторизованы как администратор.\n\n ' ,reply_markup=markup)
+            bot.send_message(message.chat.id, f'Вы авторизованы как администратор. '
+                                              f'Ваш id: {message.from_user.id}\n\n ' ,reply_markup=markup)
         else:
-            bot.send_message(message.chat.id, f'Вы авторизованы как пользователь.\n\n '
+            bot.send_message(message.chat.id, f'Вы авторизованы как пользователь. Ваш id: {message.from_user.id}\n\n '
                                               f'Чтобы начать отсчет рабочего времени, введите - /start_work')
 
 def get_password(message):
@@ -483,7 +485,9 @@ def stat_employee(message):
             column = 0
         workbook.close()
 
+        # отправка в бота и последующее удаление из корневой папки
         bot.send_document(message.chat.id, open(filename, 'rb'))
+        os.remove(filename)
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "drop_user")
