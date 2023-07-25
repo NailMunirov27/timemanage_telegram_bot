@@ -13,6 +13,8 @@ from geopy import Yandex
 from telebot import types
 from telegram import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton
 
+
+
 #Токен бота
 bot = telebot.TeleBot(token, parse_mode=None, threaded=False)
 # Локаль для вывода на русском языке
@@ -51,6 +53,8 @@ def start(message):
             markup.row(stat_employee)
             drop_user = types.InlineKeyboardButton(text='Удалить сотрудника', callback_data='drop_user')
             markup.row(drop_user)
+            payment = types.InlineKeyboardButton(text='Посмотреть баланс бота', callback_data='payment')
+            markup.row(payment)
             bot.send_message(message.chat.id, f'Вы авторизованы как администратор. '
                                               f'Ваш id: {message.from_user.id}\n\n ' ,reply_markup=markup)
         else:
@@ -510,6 +514,16 @@ def drop_user(message):
         bot.send_message(message.chat.id, f'Вы удалили {message.text}.')
     else:
         bot.send_message(message.chat.id, f'Такого пользователя не существует либо он уже удален.')
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "payment")
+def high_notice_users(call: types.CallbackQuery):
+    keyboard = telebot.types.InlineKeyboardMarkup()
+    url_button = telebot.types.InlineKeyboardButton(text="Перейти на my.firstvds.ru",
+                                                    url="https://my.firstvds.ru/")
+    keyboard.add(url_button)
+    bot.send_message(chat_id=call.message.chat.id, text=f"Нажмите на кнопку, чтобы посмотреть баланс или "
+                                                   f"пополнить счет бота", reply_markup=keyboard)
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "high_notice_button")
